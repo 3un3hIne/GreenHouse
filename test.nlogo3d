@@ -1,76 +1,36 @@
-extensions [
-  csv
-  time
-]
+extensions[ csv table time ]
 
 globals[
-  time-series
+  timeseries
+  firsttime
+  lasttime
+  tick-datetime
+  ;n
 ]
 
-to data-processing
-  __clear-all-and-reset-ticks
-  let value-list["0103" "0104" "0203" "0204" "0301" "0302" "0304" "0305" "0320" "0401" "0402" "0404" "0405" "0420"]
-  set time-series time:ts-create value-list;time series frame
-  let ts[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-  ifelse(file-exists? "test61.csv")[
-    file-open "test61.csv"
-    while[ not file-at-end? ][
-      let data csv:from-row file-read-line
-      if(item 2 data < 21)[
-        set ts replace-item 0 ts item 0 data;time
-        ifelse(item 1 data = 1)[
-          ifelse(item 2 data = 3)[set ts replace-item 1 ts item 3 data];0103
-          [set ts replace-item 2 ts item 3 data];0104
-        ]
-        [
-          ifelse(item 1 data = 2)[
-            ifelse(item 2 data = 3)[set ts replace-item 3 ts item 3 data];0203
-            [set ts replace-item 4 ts item 3 data];0204
-          ]
-          [
-            ifelse(item 1 data = 3)[
-              ifelse(item 2 data = 1)[set ts replace-item 5 ts item 3 data];0301
-              [
-                ifelse(item 2 data = 2)[set ts replace-item 6 ts item 3 data];0302
-                [
-                  ifelse(item 2 data = 4)[set ts replace-item 7 ts item 3 data];0304
-                  [
-                    ifelse(item 2 data = 5)[set ts replace-item 8 ts item 3 data];0305
-                    [set ts replace-item 9 ts item 3 data];0320
-                  ]
-                ]
-              ]
-            ]
-            [
-              ifelse(item 2 data = 1)[set ts replace-item 10 ts item 3 data];0401
-              [
-                ifelse(item 2 data = 2)[set ts replace-item 11 ts item 3 data];0402
-                [
-                  ifelse(item 2 data = 4)[set ts replace-item 12 ts item 3 data];0404
-                  [
-                    ifelse(item 2 data = 5)[set ts replace-item 13 ts item 3 data];0405
-                    [set ts replace-item 14 ts item 3 data];0420
-                  ]
-                ]
-              ]
-            ]
-          ]
-        ]
-        time:ts-add-row time-series ts
-      ]
-    ]
-    user-message "File loading complete"
-    file-close
-  ]
-  [user-message "There is no test61.csv file in current directory!"]
-end
-
-
+patches-own[
+  out?
+  air?
+  substrate?
+  broof?
+  froof?
+  wall?
+  temperature
+  humidity
+  illumination
+  co2
+]
 
 to setup
-  clear-all
+  __clear-all-and-reset-ticks
+  data-import
+  ;set timeseries time:ts-load "timeseries.csv"
+  build-greenhouse
+  initialize-patches
+end
 
-  create-turtles 1[
+to build-greenhouse
+    create-turtles 1[
     setxyz 9 1 0
     set pen-mode "down"
     set color brown
@@ -80,13 +40,9 @@ to setup
     set roll 0
   ]
   ask turtles [
-    fd 8 rt 90
-    fd 62 rt 90
-    fd 8 rt 90
-    ;墙与地
+    fd 8 rt 90 fd 62 rt 90 fd 8 rt 90;墙与地
     set color gray
-    fd 62
-    ;前屋面与地
+    fd 62;前屋面与地
     set pen-mode "up"
     set color yellow
     setxyz 1 1 0
@@ -138,45 +94,141 @@ to setup
     ;前屋面
     die
   ]
+end
 
-  ask patches with [pzcor = 0 and pxcor > 1 and pxcor < 8 and pycor > 1 and pycor < 63][
+to initialize-patches
+  ask patches[
+    set out? false
+    set air? false
+    set substrate? false
+    set broof? false
+    set froof? false
+    set wall? false
+  ]
+
+  ask patches with [pxcor > 1 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor = 0][
     set pcolor brown
+    set substrate? true
+  ];基质属性设置
+  ask patches with [pxcor = 2 and pycor > 1 and pycor < 63 and pzcor = 3][set broof? true]
+  ;后屋面属性设置
+  ask patches with [pxcor = 1 and pycor > 0 and pycor < 64 and pzcor < 2.14][set wall? true]
+  ;后墙属性设置
+  ask patches with [pxcor > 1 and pxcor < 7 and pycor = 1 and pzcor < 3.4][set wall? true]
+  ask patches with [pxcor > 6 and pxcor < 9 and pycor = 1 and pzcor < 3][set wall? true]
+  ask patches with [pxcor = 9 and pycor = 1 and pzcor < 2][set wall? true]
+  ;西墙属性设置
+  ask patches with [pxcor > 1 and pxcor < 7 and pycor = 63 and pzcor < 3.4][set wall? true]
+  ask patches with [pxcor > 6 and pxcor < 9 and pycor = 63 and pzcor < 3][set wall? true]
+  ask patches with [pxcor = 9 and pycor = 63 and pzcor < 2][set wall? true]
+  ;东墙属性设置
+  ask patches with [pxcor > 2 and pxcor < 7 and pycor > 1 and pycor < 63 and pzcor = 3][set froof? true]
+  ask patches with [pxcor > 5 and pxcor < 9 and pycor > 1 and pycor < 63 and pzcor = 2][set froof? true]
+  ask patches with [pxcor > 7 and pxcor < 10 and pycor > 1 and pycor < 63 and pzcor = 1][set froof? true]
+  ask patches with [pxcor = 9 and pycor > 1 and pycor < 63 and pzcor = 0][set froof? true]
+  ;前屋面属性设置
+  ask patches with [pxcor > 1 and pxcor < 6 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 3][set air? true]
+  ask patches with [pxcor > 5 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 2][set air? true]
+  ask patches with [pxcor = 8 and pycor > 1 and pycor < 63 and pzcor = 0][set air? true]
+  ;温室内空气属性设置
+end
+
+to data-import
+  set firsttime time:create ""
+  set lasttime time:create "2000-01-01 00:00:00.000"
+  file-open "timeseries.csv"
+  while[ not file-at-end? ][
+    let data csv:from-row file-read-line
+    ifelse(is-number? item 1 data)[
+      time:ts-add-row timeseries data
+      if(time:is-after (firsttime)(item 0 data))[
+        set firsttime item 0 data
+      ]
+      if(time:is-before (lasttime)(item 0 data))[
+        set lasttime item 0 data
+      ]
+    ]
+    [
+      set data but-first data
+      set timeseries time:ts-create data
+    ]
   ]
-  ask patches with [pxcor = 2 and pycor > 1 and pycor < 63 and pzcor = 3][
-    set pcolor gray
+  user-message "File loading complete"
+  file-close
+end
+
+to show-change
+  let fdt time:plus firsttime -10.0 "minutes"
+  let ldt time:plus lasttime -10.0 "minutes"
+  set tick-datetime time:anchor-to-ticks fdt 10 "minutes"
+  while[time:is-before (tick-datetime)(ldt)][
+    tick
+    ask patches with [air?][
+      carefully[
+        set temperature time:ts-get-exact timeseries tick-datetime "airT"
+        set humidity time:ts-get-exact timeseries tick-datetime "airRH"
+        set illumination time:ts-get-exact timeseries tick-datetime "I"
+        set temperature time:ts-get-exact timeseries tick-datetime "CO2"
+      ]
+      [
+        set temperature time:ts-get-interp timeseries tick-datetime "airT"
+        set humidity time:ts-get-interp timeseries tick-datetime "airRH"
+        set illumination time:ts-get-interp timeseries tick-datetime "I"
+        set temperature time:ts-get-interp timeseries tick-datetime "CO2"
+      ]
+    ]
+    ask patches with[substrate?][
+      carefully[
+        set temperature time:ts-get-exact timeseries tick-datetime "subT"
+        set humidity time:ts-get-exact timeseries tick-datetime "subRH"
+      ]
+      [
+        set temperature time:ts-get-interp timeseries tick-datetime "airT"
+        set humidity time:ts-get-interp timeseries tick-datetime "airRH"
+      ]
+    ]
+    show-color
   ]
-  ask patches with [pxcor = 1 and pycor > 0 and pycor < 64 and pzcor < 2.14][
-    set pcolor yellow]
+  reset-ticks
+end
 
-  ask patches with [pycor = 1 and pxcor > 1 and pxcor < 7 and pzcor < 3.4][
-    set pcolor yellow]
-  ask patches with [pycor = 1 and pxcor > 6 and pxcor < 9 and pzcor < 3][
-    set pcolor yellow]
-  ask patches with [pycor = 1 and pxcor = 9 and pzcor < 2][
-    set pcolor yellow]
-
-  ask patches with [pycor = 63 and pxcor > 1 and pxcor < 7 and pzcor < 3.4][
-    set pcolor yellow]
-  ask patches with [pycor = 63 and pxcor > 6 and pxcor < 9 and pzcor < 3][
-    set pcolor yellow]
-  ask patches with [pycor = 63 and pxcor = 9 and pzcor < 2][
-    set pcolor yellow]
-
-  ask patches with [pxcor > 2 and pxcor < 7 and pycor > 1 and pycor < 63 and pzcor = 3][
-    set pcolor white]
-  ask patches with [pxcor > 5 and pxcor < 9 and pycor > 1 and pycor < 63 and pzcor = 2][
-    set pcolor white]
-  ask patches with [pxcor > 7 and pxcor < 10 and pycor > 1 and pycor < 63 and pzcor = 1][
-    set pcolor white]
-  ask patches with [pxcor = 9 and pycor > 1 and pycor < 63 and pzcor = 0][
-    set pcolor white]
-
-  ask patches with [pxcor > 1 and pxcor < 6 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 3][
-    set pcolor blue]
-  ask patches with [pxcor > 5 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 2][
-    set pcolor blue]
-  ask patches with [pxcor = 8 and pycor > 1 and pycor < 63 and pzcor = 0][
-    set pcolor blue]
+to show-color
+  ifelse(show-temperature?)[
+    ask patches with[air?][
+      ifelse(temperature < 5)[set pcolor 10]
+      [ifelse(temperature > 30)[set pcolor 19.9]
+        [set pcolor scale-color red temperature 5 30]
+      ]
+    ]
+    ask patches with[substrate?][
+      ifelse(temperature < 5)[set pcolor 30]
+      [ifelse(temperature > 30)[set pcolor 39.9]
+        [set pcolor scale-color brown temperature 5 30]
+      ]
+    ]
+  ]
+  [
+    ifelse(show-humidity?)[
+      ask patches with[air?][
+        ifelse(humidity > 80)[set pcolor 9.9]
+        [set pcolor scale-color gray humidity 0 80]
+      ]
+      ask patches with[substrate?][set pcolor scale-color brown humidity 0 1]
+    ]
+    [
+      ifelse(show-illumination?)[
+        ask patches with[air?][set pcolor scale-color violet illumination 0 65000]
+      ]
+      [
+        if(show-CO2?)[
+          ask patches with[air?][
+            ifelse(CO2 < 200)[set pcolor 40]
+            [set pcolor scale-color yellow CO2 200 900]
+          ]
+        ]
+      ]
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -203,10 +255,88 @@ GRAPHICS-WINDOW
 0
 5
 1
-0
+1
 1
 ticks
 30.0
+
+BUTTON
+96
+10
+162
+43
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+0
+46
+154
+79
+show-temperature?
+show-temperature?
+1
+1
+-1000
+
+SWITCH
+155
+46
+291
+79
+show-humidity?
+show-humidity?
+1
+1
+-1000
+
+SWITCH
+-2
+80
+156
+113
+show-illumination?
+show-illumination?
+1
+1
+-1000
+
+SWITCH
+157
+81
+291
+114
+show-CO2?
+show-CO2?
+0
+1
+-1000
+
+BUTTON
+172
+6
+280
+39
+NIL
+show-change
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
