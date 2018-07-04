@@ -1,18 +1,25 @@
 extensions[csv table time]
 
 globals[
-  raw-timeseries
-  dict
-  raw-ts
-  timeseries
-  ts
-  firsttime
-  lasttime
-  data
+  raw-timeseries;store raw data
+  dict;store correspondence between column names and column numbers
+  raw-ts;store a row of raw data
+  timeseries;store cleaned data
+  ts;store a row of cleaned data
+  ticktime;changeing while traversing the folder
+  tick-endtime;time of the final file
+  filename
+  lostfilename
+  existnum;number of exist files
+  lostnum;number of lost files
+  allnum;number of total files we should have
 ]
 
 to setup
-  __clear-all-and-reset-ticks
+  clear-all
+  reset-ticks
+  set ticktime time:anchor-to-ticks (time:create starttime) 1 "days"
+  set tick-endtime time:create endtime;set the conditions of the loop
   let raw-col-namelist[103 104 203 204 301 302 304 305 320 401 402 404 405 420]
   set raw-timeseries time:ts-create raw-col-namelist;raw timeseries column name list
   let raw-col-numlist[1 2 3 4 5 6 7 8 9 10 11 12 13 14]
@@ -26,46 +33,61 @@ to setup
   set ts[0 0 0 0 0 0 0];store timeseries row list
 end
 
-to rawdata-import;import rawdata and convert to raw-timeseries
-  file-open user-file
-  while[ not file-at-end? ][
-    let rawdata csv:from-row file-read-line
-    if(is-number? item 3 rawdata)[;skip the header
-      if(item 3 rawdata < 21)[;leaving excess value
-        carefully[
-          ;if(time:is-after (firsttime)(item 0 rawdata))[
-          ;  set firsttime item 0 rawdata
-          ;];always store the firsttime of raw-timeseries
-          if(time:difference-between (item 0 raw-ts)(item 0 rawdata) "seconds" > 90)[
-            time:ts-add-row raw-timeseries raw-ts
-            set raw-ts[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-            set raw-ts replace-item 0 raw-ts item 0 rawdata;change time after add one row
-          ];data interval less than 90s should be in one row
-        ]
-        [
-          set raw-ts replace-item 0 raw-ts item 0 rawdata
-          set firsttime item 0 rawdata;store the firsttime of raw-timeseries in the first run
-          set lasttime item 0 rawdata;initialize the lasttime of raw-timeseries
-        ];first run of rawdata-import
-        let line (item 2 rawdata * 100) + item 3 rawdata
-        let lnum table:get dict line
-        set raw-ts replace-item lnum raw-ts item 4 rawdata
-      ];organize rawdata to store data in the specified column
+to rawdata-import
+  set-current-directory user-directory;let user set the current folder
+  while[time:is-before ticktime tick-endtime][
+    tick
+    let y time:get "year" ticktime
+    let m time:get "month" ticktime
+    let d time:get "day" ticktime
+    ifelse(m > 9)[
+      ifelse(d > 9)[set filename (word y "-" m "-" d ".csv")]
+      [set filename (word y "-" m "-0" d ".csv")]
     ]
+    [
+      ifelse(d > 9)[set filename (word y "-0" m "-" d ".csv")]
+      [set filename (word y "-0" m "-0" d ".csv")]
+    ]
+    ifelse(file-exists? filename)[
+      file-open filename
+      while[ not file-at-end? ][
+        let rawdata csv:from-row file-read-line
+        if(is-number? item 3 rawdata)[;skip the header
+          if(item 3 rawdata < 21)[;leaving excess value
+            carefully[
+              if(time:difference-between (item 0 raw-ts)(item 0 rawdata) "seconds" > 90)[
+                time:ts-add-row raw-timeseries raw-ts
+                set raw-ts[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+                set raw-ts replace-item 0 raw-ts item 0 rawdata
+                ;change time after add one row
+              ];data interval less than 90s should be in one row
+            ]
+            [set raw-ts replace-item 0 raw-ts item 0 rawdata];first run of rawdata-import
+            let lnum table:get dict ((item 2 rawdata * 100) + item 3 rawdata)
+            set raw-ts replace-item lnum raw-ts item 4 rawdata
+          ];organize rawdata to store data in the specified column
+        ]
+      ]
+      time:ts-add-row raw-timeseries raw-ts;add the last row
+      time:ts-write raw-timeseries "raw-timeseries.csv"
+      file-close-all
+      set existnum existnum + 1
+    ]
+    [
+      set lostfilename sentence lostfilename filename
+      set lostnum lostnum + 1
+    ]
+    set allnum allnum + 1
   ]
-  if(time:is-before(lasttime)(item 0 raw-ts))[
-    set lasttime item 0 raw-ts
-  ];always store the lasttime of raw-timeseries
-  time:ts-add-row raw-timeseries raw-ts;add the last row
-  time:ts-write raw-timeseries "raw-timeseries.csv"
-  user-message "File loading complete"
-  file-close-all
+  user-message (word "A total of " allnum " days are set for the start and end time,\nof which "
+    existnum " days of data have been imported \nand " lostnum " days of data are missing")
 end
 
-to dataprocessing
+to rawdata-process
+  set-current-directory user-directory;let user set the current folder
   file-open "raw-timeseries.csv"
   while[ not file-at-end? ][
-    set data csv:from-row file-read-line
+    let data csv:from-row file-read-line
     if(item 2 data < 100)[;skip the header
       set ts replace-item 0 ts item 0 data;time
       set ts replace-item 1 ts ((item 5 data + item 10 data) / 2);air temperature
@@ -86,7 +108,7 @@ to dataprocessing
     ]
   ]
   time:ts-write timeseries "timeseries.csv"
-  user-message "File loading complete"
+  user-message "Rawdata processing complete"
   file-close
 end
 @#$#@#$#@
@@ -118,11 +140,11 @@ ticks
 30.0
 
 BUTTON
-3
-115
-235
-167
-按照文件内时间先后顺序导入!!!
+4
+191
+86
+224
+原始数据导入
 rawdata-import
 NIL
 1
@@ -135,12 +157,12 @@ NIL
 1
 
 BUTTON
-46
-168
-174
-201
-NIL
-dataprocessing
+4
+236
+157
+269
+清洗原始数据并重新导出
+rawdata-process
 NIL
 1
 T
@@ -153,10 +175,10 @@ NIL
 
 BUTTON
 3
-39
-256
-108
-初始化（仅第一次运行，清空之前所有数据）
+34
+58
+67
+初始化
 setup
 NIL
 1
@@ -175,6 +197,48 @@ TEXTBOX
 40
 文件必须为csv格式
 22
+15.0
+1
+
+INPUTBOX
+3
+72
+158
+132
+starttime
+2018-03-01 00:00:00.000
+1
+0
+String
+
+INPUTBOX
+3
+130
+158
+190
+endtime
+2018-06-04 00:00:00.000
+1
+0
+String
+
+TEXTBOX
+65
+41
+215
+67
+初始化命令会清除历史数据\n仅保留输出的CSV文件
+12
+15.0
+1
+
+TEXTBOX
+94
+191
+244
+230
+遍历所选文件夹内\n文件名在起止时间内的\nCSV文件
+12
 15.0
 1
 

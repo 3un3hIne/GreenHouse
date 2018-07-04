@@ -1,11 +1,20 @@
-extensions[ csv table time ]
+extensions[time]
+
+breed[walls wall]
+breed[froofs froof]
+breed[broofs broof]
+breed[substrates substrate]
+breed[air a-air]
 
 globals[
-  timeseries
-  firsttime
-  lasttime
-  tick-datetime
-  ;n
+  timeseries;store all data
+  timelist;store all time of data
+  firsttime;the data beginning time
+  lasttime;the data ending time
+  tick-datetime;Once per cycle, increase by 10 minutes
+  datelabel;show current date
+  timelabel;show current time
+  showtemp;temporary value of show?
 ]
 
 patches-own[
@@ -19,30 +28,104 @@ patches-own[
   humidity
   illumination
   co2
+  trans
 ]
 
 to setup
   __clear-all-and-reset-ticks
-  data-import
-  ;set timeseries time:ts-load "timeseries.csv"
+  set timeseries time:ts-load "timeseries.csv"
+  set timelist time:ts-get-range timeseries "2018-03-02 00:00:00.000" "2018-06-01 00:00:00.000" "LOGOTIME"
+  set firsttime first timelist
+  set lasttime last timelist
+  set tick-datetime time:anchor-to-ticks firsttime 10 "minutes"
+  crt 1[set pen-size 2]
   build-greenhouse
-  initialize-patches
+  ;initialize-patches
+end
+
+to build-wall
+  let m 0
+  while[m < 2][
+    create-walls 1[
+      setxyz 1 (1.15 + 0.7 * m) 1.79
+      set color yellow
+      set shape "square"
+      set size 0.75
+      set heading 0
+      set roll 0
+      set pitch 270
+      hatch 1[fd 0.7]
+      hatch 1[fd 1.4]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 6][
+    let n 1
+    create-broofs 1[
+      setxyz 1 (1 + 0.2 * m) 2.14
+      set color green
+      set shape "square"
+      set size 0.215
+      set heading 270
+      set pitch 325
+      set roll 90
+      repeat 11[
+        hatch 1[fd -0.2 * n]
+        set n n + 1
+      ]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 10][
+    let n 1
+    create-froofs 1[
+      setxyz 2.8 (1 + 0.1 * m) 3.4
+      set color white
+      set shape "square"
+      set size 0.11
+      set heading 90
+      set pitch 0
+      set roll 90
+      repeat 70[
+        hatch 1[rt 0.41 * n fd 0.1 * n]
+        set n n + 1
+      ]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 6][
+    let n 1
+    create-broofs 1[
+      setxyz 2 (1 + 0.2 * m) 0.1
+      set color brown
+      set shape "square"
+      set size 0.215
+      set heading 90
+      set pitch 0
+      set roll 90
+      repeat 30[
+        hatch 1[fd 0.2 * n]
+        set n n + 1
+      ]
+    ]
+    set m m + 1
+  ]
 end
 
 to build-greenhouse
-    create-turtles 1[
+  ask turtle 0[
     setxyz 9 1 0
-    set pen-mode "down"
-    set color brown
-    set pen-size 2
     set heading 270
     set pitch 0
     set roll 0
-  ]
-  ask turtles [
-    fd 8 rt 90 fd 62 rt 90 fd 8 rt 90;墙与地
+    set pen-mode "down"
+    set color brown
+    fd 8 rt 90 fd 1 rt 90 fd 8 rt 90;墙与地
     set color gray
-    fd 62;前屋面与地
+    fd 1;前屋面与地
     set pen-mode "up"
     set color yellow
     setxyz 1 1 0
@@ -52,7 +135,7 @@ to build-greenhouse
     set pen-mode "down"
     fd 2.14
     set pitch 0
-    fd 62
+    fd 1
     set pitch 270
     fd 2.14
     ;后墙
@@ -70,7 +153,7 @@ to build-greenhouse
     set heading 0
     set pitch 0
     set roll 0
-    fd 62
+    fd 1
     set heading 270
     set pitch 325
     set roll 90
@@ -83,35 +166,43 @@ to build-greenhouse
     set heading 90
     set pitch 0
     set roll 90
-    repeat 7[rt 7 fd 1]
+    repeat 73[rt 0.77 fd 0.1]
     set pen-mode "up"
-    setxyz 2.8 63 3.4
+    setxyz 2.8 2 3.4
     set pen-mode "down"
     set heading 90
     set pitch 0
     set roll 90
-    repeat 7[rt 7 fd 1]
+    repeat 73[rt 0.77 fd 0.1]
     ;前屋面
+    set pen-mode "up"
+    set shape "square"
+    set heading 0
+    set roll 0
+    set pitch 270
     die
   ]
+
 end
 
 to initialize-patches
   ask patches[
-    set out? false
+    set out? true
     set air? false
     set substrate? false
     set broof? false
     set froof? false
     set wall? false
   ]
-
   ask patches with [pxcor > 1 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor = 0][
     set pcolor brown
+    set out? false
     set substrate? true
   ];基质属性设置
-  ask patches with [pxcor = 2 and pycor > 1 and pycor < 63 and pzcor = 3][set broof? true]
-  ;后屋面属性设置
+  ask patches with [pxcor = 2 and pycor > 1 and pycor < 63 and pzcor = 3][
+    set out? false
+    set broof? true
+  ];后屋面属性设置
   ask patches with [pxcor = 1 and pycor > 0 and pycor < 64 and pzcor < 2.14][set wall? true]
   ;后墙属性设置
   ask patches with [pxcor > 1 and pxcor < 7 and pycor = 1 and pzcor < 3.4][set wall? true]
@@ -122,112 +213,213 @@ to initialize-patches
   ask patches with [pxcor > 6 and pxcor < 9 and pycor = 63 and pzcor < 3][set wall? true]
   ask patches with [pxcor = 9 and pycor = 63 and pzcor < 2][set wall? true]
   ;东墙属性设置
+  ask patches with [wall?][set out? false];墙属性设置
   ask patches with [pxcor > 2 and pxcor < 7 and pycor > 1 and pycor < 63 and pzcor = 3][set froof? true]
   ask patches with [pxcor > 5 and pxcor < 9 and pycor > 1 and pycor < 63 and pzcor = 2][set froof? true]
   ask patches with [pxcor > 7 and pxcor < 10 and pycor > 1 and pycor < 63 and pzcor = 1][set froof? true]
   ask patches with [pxcor = 9 and pycor > 1 and pycor < 63 and pzcor = 0][set froof? true]
-  ;前屋面属性设置
+  ask patches with [froof?][set out? false];前屋面属性设置
   ask patches with [pxcor > 1 and pxcor < 6 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 3][set air? true]
   ask patches with [pxcor > 5 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 2][set air? true]
   ask patches with [pxcor = 8 and pycor > 1 and pycor < 63 and pzcor = 0][set air? true]
-  ;温室内空气属性设置
+  ask patches with [air?][set out? false];温室内空气属性设置
 end
 
-to data-import
-  set firsttime time:create ""
-  set lasttime time:create "2000-01-01 00:00:00.000"
-  file-open "timeseries.csv"
-  while[ not file-at-end? ][
-    let data csv:from-row file-read-line
-    ifelse(is-number? item 1 data)[
-      time:ts-add-row timeseries data
-      if(time:is-after (firsttime)(item 0 data))[
-        set firsttime item 0 data
-      ]
-      if(time:is-before (lasttime)(item 0 data))[
-        set lasttime item 0 data
-      ]
-    ]
-    [
-      set data but-first data
-      set timeseries time:ts-create data
-    ]
+;to go-test
+;  ifelse(time:is-before (tick-datetime)(lasttime))[
+;    ask patches with [froof?][
+;      carefully[set illumination (time:ts-get-exact timeseries tick-datetime "I") / 0.8]
+;      [set illumination (time:ts-get-interp timeseries tick-datetime "I") / 0.8]
+;      set pcolor scale-color violet illumination 0 65000
+;    ]
+;    ask patches with [air?][
+;      set illumination 0.8 * max [illumination] of neighbors
+;      set pcolor scale-color violet illumination 0 65000
+;    ]
+;    show-label
+;  ]
+;  [stop]
+;  tick
+;end
+
+to diffusion
+  ask patches with [substrate?][set temperature 20]
+  ask patches with [wall? or broof? or froof?][
+    set temperature 25
+    set pcolor scale-color red temperature 5 35
   ]
-  user-message "File loading complete"
-  file-close
+  ask patches with [froof?][set illumination 0.8 * max [illumination] of neighbors]
+  ask patches with [air?][
+    repeat 3[set illumination 0.8 * max [illumination] of neighbors]
+    set pcolor scale-color violet illumination 0 65000
+  ]
 end
 
-to show-change
-  let fdt time:plus firsttime -10.0 "minutes"
-  let ldt time:plus lasttime -10.0 "minutes"
-  set tick-datetime time:anchor-to-ticks fdt 10 "minutes"
-  while[time:is-before (tick-datetime)(ldt)][
-    tick
+to go
+  ifelse(time:is-before (tick-datetime)(lasttime))[
     ask patches with [air?][
       carefully[
         set temperature time:ts-get-exact timeseries tick-datetime "airT"
         set humidity time:ts-get-exact timeseries tick-datetime "airRH"
         set illumination time:ts-get-exact timeseries tick-datetime "I"
-        set temperature time:ts-get-exact timeseries tick-datetime "CO2"
-      ]
-      [
+        set co2 time:ts-get-exact timeseries tick-datetime "CO2"
+      ][
         set temperature time:ts-get-interp timeseries tick-datetime "airT"
         set humidity time:ts-get-interp timeseries tick-datetime "airRH"
         set illumination time:ts-get-interp timeseries tick-datetime "I"
-        set temperature time:ts-get-interp timeseries tick-datetime "CO2"
+        set co2 time:ts-get-interp timeseries tick-datetime "CO2"
       ]
     ]
     ask patches with[substrate?][
       carefully[
         set temperature time:ts-get-exact timeseries tick-datetime "subT"
         set humidity time:ts-get-exact timeseries tick-datetime "subRH"
-      ]
-      [
-        set temperature time:ts-get-interp timeseries tick-datetime "airT"
-        set humidity time:ts-get-interp timeseries tick-datetime "airRH"
+      ][
+        set temperature time:ts-get-interp timeseries tick-datetime "subT"
+        set humidity time:ts-get-interp timeseries tick-datetime "subRH"
       ]
     ]
+    if(showtemp != show?)[
+      clear-drawing
+      ask turtle 0[ask other turtles [die]]
+      build-greenhouse
+      show-legend
+    ]
+    show-legend
     show-color
+    show-label
+  ][
+    stop
+    reset-ticks
   ]
-  reset-ticks
+  tick
 end
 
 to show-color
-  ifelse(show-temperature?)[
-    ask patches with[air?][
-      ifelse(temperature < 5)[set pcolor 10]
-      [ifelse(temperature > 30)[set pcolor 19.9]
-        [set pcolor scale-color red temperature 5 30]
-      ]
-    ]
-    ask patches with[substrate?][
-      ifelse(temperature < 5)[set pcolor 30]
-      [ifelse(temperature > 30)[set pcolor 39.9]
-        [set pcolor scale-color brown temperature 5 30]
-      ]
-    ]
-  ]
-  [
-    ifelse(show-humidity?)[
-      ask patches with[air?][
-        ifelse(humidity > 80)[set pcolor 9.9]
-        [set pcolor scale-color gray humidity 0 80]
-      ]
-      ask patches with[substrate?][set pcolor scale-color brown humidity 0 1]
-    ]
-    [
-      ifelse(show-illumination?)[
-        ask patches with[air?][set pcolor scale-color violet illumination 0 65000]
-      ]
-      [
-        if(show-CO2?)[
-          ask patches with[air?][
-            ifelse(CO2 < 200)[set pcolor 40]
-            [set pcolor scale-color yellow CO2 200 900]
-          ]
+  ifelse(show? = "T")[
+    ask patches with[air?][set pcolor scale-color red temperature 5 35]
+    ask patches with[substrate?][set pcolor scale-color brown temperature 5 35]
+  ][
+    ifelse(show? = "RH")[
+      ask patches with[air?][set pcolor scale-color gray humidity 20 80]
+      ask patches with[substrate?][set pcolor scale-color brown humidity 0.1 0.7]
+    ][
+      ifelse(show? = "I")[
+        ask patches with[air?][set pcolor scale-color violet illumination 0 60000]
+        ask patches with[substrate?][set pcolor scale-color brown humidity 0.1 0.7]
+      ][
+        ifelse(show? = "CO2")[
+          ask patches with[air?][set pcolor scale-color yellow co2 200 800]
+          ask patches with[substrate?][set pcolor scale-color brown humidity 0.1 0.7]
+        ][
+          ask patches with[air?][set pcolor black]
+          ask patches with[substrate?][set pcolor brown]
         ]
       ]
     ]
+  ]
+end
+
+to show-label
+  let n time:get "year" tick-datetime
+  let y time:get "month" tick-datetime
+  let r time:get "day" tick-datetime
+  let s time:get "hour" tick-datetime
+  let f time:get "minute" tick-datetime
+  ifelse(y > 9)[
+    ifelse(r > 9)[set datelabel (word "Date:" n "-" y "-" r)]
+    [set datelabel (word "Date:" n "-" y "-0" r)]
+  ][
+    ifelse(r > 9)[set datelabel (word "Date:" n "-0" y "-" r)]
+    [set datelabel (word "Date:" n "-0" y "-0" r)]
+  ]
+  ifelse(s > 9)[
+    ifelse(f > 9)[set timelabel (word "Time:" s ":" f "    ")]
+    [set timelabel (word "Time:" s ":0" f "    ")]
+  ][
+    ifelse(f > 9)[set timelabel (word "Time:0" s ":" f "    ")]
+    [set timelabel (word "Time:0" s ":0" f "    ")]
+  ]
+  ask patch 3 0 5[set plabel datelabel]
+  ask patch 3 0 4[set plabel timelabel]
+  ask patch 3 0 3[set plabel (word "airT:"
+    (precision (time:ts-get timeseries tick-datetime "airT") 2) "     ")]
+  ask patch 5 0 3[set plabel (word " subT:"
+    (precision (time:ts-get timeseries tick-datetime "subT") 2))]
+  ask patch 3 0 2[set plabel (word "airRH:"
+    (precision (time:ts-get timeseries tick-datetime "airRH") 1) "%   ")]
+  ask patch 5 0 2[set plabel (word " subRH:"
+    (precision ((time:ts-get timeseries tick-datetime "subRH") * 100)  0) "%")]
+  ifelse((time:ts-get timeseries tick-datetime "I") < 10)[
+    ask patch 3 0 1[set plabel (word " I:"
+    (precision (time:ts-get timeseries tick-datetime "I") 0) "lux    ")]
+  ][
+    ifelse((time:ts-get timeseries tick-datetime "I") < 100)[
+      ask patch 3 0 1[set plabel (word "I:"
+        (precision (time:ts-get timeseries tick-datetime "I") 0) "lux      ")]
+    ][
+      ifelse((time:ts-get timeseries tick-datetime "I") < 1000)[
+        ask patch 3 0 1[set plabel (word "I:"
+          (precision (time:ts-get timeseries tick-datetime "I") 0) "lux     ")]
+      ][
+        ask patch 3 0 1[set plabel (word "I:"
+          (precision (time:ts-get timeseries tick-datetime "I") 0) "lux    ")]
+      ]
+    ]
+  ]
+  ask patch 5 0 1[set plabel (word "CO2:"
+    (precision (time:ts-get timeseries tick-datetime "CO2") 0) "ppm  ")]
+end
+
+to show-legend
+  ifelse(show? = "T")[
+    legend 0 41 40 5
+    legend 2 21 40 5
+  ][
+    ifelse(show? = "RH")[
+      legend 0 41 0.8 0.1
+      legend 2 11 90 10
+    ][
+      ifelse(show? = "I")[
+        legend 0 41 0.8 0.1
+        legend 2 121 70000 10000
+      ][
+        ifelse(show? = "CO2")[
+          legend 0 41 0.8 0.1
+          legend 2 51 900 100
+        ][
+          clear-drawing
+          ask turtle 0[ask other turtles [die]]
+          build-greenhouse
+        ]
+      ]
+    ]
+  ]
+end
+
+to legend[x y z t]
+  ask turtle 0[
+    setxyz x 0 5
+    set size 0.5
+    set color white
+    repeat 7[
+      stamp
+      fd 0.47
+      set y y - (5 / 3)
+      set color y
+      hatch 1[
+        set size 0
+        set z (precision (z - t) 2)
+        ifelse(z = 5)[set label (word z " ")]
+        [
+          ifelse(z = 0)[set label (word " " z)]
+          [set label z]
+        ]
+        rt 90 fd 0.24 rt 90 fd 0.1
+      ]
+    ]
+    set color black
+    stamp
   ]
 end
 @#$#@#$#@
@@ -235,12 +427,12 @@ GRAPHICS-WINDOW
 0
 0
 151
-854
+61
 -1
 -1
 13.0
 1
-10
+5
 1
 1
 1
@@ -251,7 +443,7 @@ GRAPHICS-WINDOW
 0
 10
 0
-64
+3
 0
 5
 1
@@ -261,9 +453,9 @@ ticks
 30.0
 
 BUTTON
-96
+3
 10
-162
+69
 43
 NIL
 setup
@@ -277,57 +469,40 @@ NIL
 NIL
 1
 
-SWITCH
+BUTTON
+74
+11
+137
+44
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+CHOOSER
+4
+51
+142
+96
+show?
+show?
+"Don't show" "T" "RH" "I" "CO2"
 0
-46
-154
-79
-show-temperature?
-show-temperature?
-1
-1
--1000
-
-SWITCH
-155
-46
-291
-79
-show-humidity?
-show-humidity?
-1
-1
--1000
-
-SWITCH
--2
-80
-156
-113
-show-illumination?
-show-illumination?
-1
-1
--1000
-
-SWITCH
-157
-81
-291
-114
-show-CO2?
-show-CO2?
-0
-1
--1000
 
 BUTTON
-172
-6
-280
-39
+149
+9
+212
+42
 NIL
-show-change
+go
 NIL
 1
 T
@@ -399,6 +574,11 @@ Polygon -7500403 true true 15 75 15 225 150 285 150 135
 Line -16777216 false 150 285 150 135
 Line -16777216 false 150 135 15 75
 Line -16777216 false 150 135 285 75
+
+brick
+false
+0
+Rectangle -7500403 true true 0 135 300 165
 
 bug
 true
@@ -607,6 +787,21 @@ Circle -16777216 true false 30 30 240
 Circle -7500403 true true 60 60 180
 Circle -16777216 true false 90 90 120
 Circle -7500403 true true 120 120 60
+
+tile brick
+false
+0
+Rectangle -1 true false 0 0 300 300
+Rectangle -7500403 true true 15 225 150 285
+Rectangle -7500403 true true 165 225 300 285
+Rectangle -7500403 true true 75 150 210 210
+Rectangle -7500403 true true 0 150 60 210
+Rectangle -7500403 true true 225 150 300 210
+Rectangle -7500403 true true 165 75 300 135
+Rectangle -7500403 true true 15 75 150 135
+Rectangle -7500403 true true 0 0 60 60
+Rectangle -7500403 true true 225 0 300 60
+Rectangle -7500403 true true 75 0 210 60
 
 tree
 false
