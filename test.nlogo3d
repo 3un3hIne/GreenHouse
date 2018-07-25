@@ -98,7 +98,7 @@ to build-wall
   set m 0
   while[m < 6][
     let n 1
-    create-broofs 1[
+    create-substrates 1[
       setxyz 2 (1 + 0.2 * m) 0.1
       set color brown
       set shape "square"
@@ -112,6 +112,113 @@ to build-wall
       ]
     ]
     set m m + 1
+  ]
+  set m 0
+  while[m < 9][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 2)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  while[m < 14][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 3)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  while[m < 15][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 4)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  while[m < 16][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 6)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 7][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz (1.45 + 0.2 * m) (1.1 + 0.2 * n) 0.3
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 0
+        set pitch 90
+        set roll 0
+        repeat ((2.14 + 0.14 * m) / 0.2)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+     set n n + 1
+    ]
+   set m m + 1
   ]
 end
 
@@ -432,7 +539,7 @@ GRAPHICS-WINDOW
 -1
 13.0
 1
-5
+10
 1
 1
 1

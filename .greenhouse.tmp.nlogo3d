@@ -1,4 +1,10 @@
-extensions[ csv table time ]
+extensions[time]
+
+breed[walls wall]
+breed[froofs froof]
+breed[broofs broof]
+breed[substrates substrate]
+breed[air a-air]
 
 globals[
   timeseries;store all data
@@ -10,14 +16,7 @@ globals[
   timelabel;show current time
   showtemp;temporary value of show?
 ]
-
-patches-own[
-  out?
-  air?
-  substrate?
-  broof?
-  froof?
-  wall?
+turtles-own[
   temperature
   humidity
   illumination
@@ -32,118 +31,189 @@ to setup
   set firsttime first timelist
   set lasttime last timelist
   set tick-datetime time:anchor-to-ticks firsttime 10 "minutes"
-  crt 1[set pen-size 2]
   build-greenhouse
-  initialize-patches
 end
 
 to build-greenhouse
-  ask turtle 0[
-    setxyz 9 1 0
-    set heading 270
-    set pitch 0
-    set roll 0
-    set pen-mode "down"
-    set color brown
-    fd 8 rt 90 fd 62 rt 90 fd 8 rt 90;墙与地
-    set color gray
-    fd 62;前屋面与地
-    set pen-mode "up"
-    set color yellow
-    setxyz 1 1 0
-    set heading 0
-    set pitch 90
-    set roll 0
-    set pen-mode "down"
-    fd 2.14
-    set pitch 0
-    fd 62
-    set pitch 270
-    fd 2.14
-    ;后墙
-    set pen-mode "up"
-    set color green
-    setxyz 2.8 1 3.4
-    set pen-mode "down"
-    set heading 270
-    set pitch 325
-    set roll 90
-    fd 2.2
-    set pen-mode "up"
-    setxyz 2.8 1 3.4
-    set pen-mode "down"
-    set heading 0
-    set pitch 0
-    set roll 0
-    fd 62
-    set heading 270
-    set pitch 325
-    set roll 90
-    fd 2.2
-    ;后屋面
-    set pen-mode "up"
-    set color white
-    setxyz 2.8 1 3.4
-    set pen-mode "down"
-    set heading 90
-    set pitch 0
-    set roll 90
-    repeat 7[rt 7 fd 1]
-    set pen-mode "up"
-    setxyz 2.8 63 3.4
-    set pen-mode "down"
-    set heading 90
-    set pitch 0
-    set roll 90
-    repeat 7[rt 7 fd 1]
-    ;前屋面
-    set pen-mode "up"
-    set shape "square"
-    set heading 0
-    set roll 0
-    set pitch 270
+  let m 0
+  while[m < 2][
+    create-walls 1[
+      setxyz 1 (1.15 + 0.7 * m) 1.79
+      set color yellow
+      set shape "square"
+      set size 0.75
+      set heading 0
+      set roll 0
+      set pitch 270
+      hatch 1[fd 0.7]
+      hatch 1[fd 1.4]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 6][
+    let n 1
+    create-broofs 1[
+      setxyz 1 (1 + 0.2 * m) 2.14
+      set color green
+      set shape "square"
+      set size 0.215
+      set heading 270
+      set pitch 325
+      set roll 90
+      repeat 11[
+        hatch 1[fd -0.2 * n]
+        set n n + 1
+      ]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 10][
+    let n 1
+    create-froofs 1[
+      setxyz 2.8 (1 + 0.1 * m) 3.4
+      set color white
+      set shape "square"
+      set size 0.11
+      set heading 90
+      set pitch 0
+      set roll 90
+      repeat 70[
+        hatch 1[rt 0.41 * n fd 0.1 * n]
+        set n n + 1
+      ]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 6][
+    let n 1
+    create-substrates 1[
+      setxyz 2 (1 + 0.2 * m) 0.1
+      set color brown
+      set shape "square"
+      set size 0.215
+      set heading 90
+      set pitch 0
+      set roll 90
+      repeat 30[
+        hatch 1[fd 0.2 * n]
+        set n n + 1
+      ]
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 9][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 2)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  while[m < 14][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 3)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  while[m < 15][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 4)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  while[m < 16][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz 2.85 (1.1 + 0.2 * n) (0.3 + 0.2 * m)
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 90
+        set pitch 0
+        set roll 90
+        repeat (5 * sqrt(55.3536 - (4.14 + m * 0.2) ^ 2) - 6)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+      set n n + 1
+    ]
+    set m m + 1
+  ]
+  set m 0
+  while[m < 7][
+    let n 0
+    while[n < 5][
+      let o 1
+      create-air 1[
+        setxyz (1.45 + 0.2 * m) (1.1 + 0.2 * n) 0.3
+        set color blue
+        set shape "square"
+        set size 0.215
+        set heading 0
+        set pitch 90
+        set roll 0
+        repeat ((2.14 + 0.14 * m) / 0.2)[
+          hatch 1[fd 0.2 * o]
+          set o o + 1
+        ]
+      ]
+     set n n + 1
+    ]
+   set m m + 1
   ]
 end
 
-to initialize-patches
-  ask patches[
-    set out? true
-    set air? false
-    set substrate? false
-    set broof? false
-    set froof? false
-    set wall? false
-  ]
-  ask patches with [pxcor > 1 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor = 0][
-    set pcolor brown
-    set out? false
-    set substrate? true
-  ];基质属性设置
-  ask patches with [pxcor = 2 and pycor > 1 and pycor < 63 and pzcor = 3][
-    set out? false
-    set broof? true
-  ];后屋面属性设置
-  ask patches with [pxcor = 1 and pycor > 0 and pycor < 64 and pzcor < 2.14][set wall? true]
-  ;后墙属性设置
-  ask patches with [pxcor > 1 and pxcor < 7 and pycor = 1 and pzcor < 3.4][set wall? true]
-  ask patches with [pxcor > 6 and pxcor < 9 and pycor = 1 and pzcor < 3][set wall? true]
-  ask patches with [pxcor = 9 and pycor = 1 and pzcor < 2][set wall? true]
-  ;西墙属性设置
-  ask patches with [pxcor > 1 and pxcor < 7 and pycor = 63 and pzcor < 3.4][set wall? true]
-  ask patches with [pxcor > 6 and pxcor < 9 and pycor = 63 and pzcor < 3][set wall? true]
-  ask patches with [pxcor = 9 and pycor = 63 and pzcor < 2][set wall? true]
-  ;东墙属性设置
-  ask patches with [wall?][set out? false];墙属性设置
-  ask patches with [pxcor > 2 and pxcor < 7 and pycor > 1 and pycor < 63 and pzcor = 3][set froof? true]
-  ask patches with [pxcor > 5 and pxcor < 9 and pycor > 1 and pycor < 63 and pzcor = 2][set froof? true]
-  ask patches with [pxcor > 7 and pxcor < 10 and pycor > 1 and pycor < 63 and pzcor = 1][set froof? true]
-  ask patches with [pxcor = 9 and pycor > 1 and pycor < 63 and pzcor = 0][set froof? true]
-  ask patches with [froof?][set out? false];前屋面属性设置
-  ask patches with [pxcor > 1 and pxcor < 6 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 3][set air? true]
-  ask patches with [pxcor > 5 and pxcor < 8 and pycor > 1 and pycor < 63 and pzcor > 0 and pzcor < 2][set air? true]
-  ask patches with [pxcor = 8 and pycor > 1 and pycor < 63 and pzcor = 0][set air? true]
-  ask patches with [air?][set out? false];温室内空气属性设置
-end
+
 
 ;to go-test
 ;  ifelse(time:is-before (tick-datetime)(lasttime))[
@@ -162,22 +232,22 @@ end
 ;  tick
 ;end
 
-to diffusion
-  ask patches with [substrate?][set temperature 20]
-  ask patches with [wall? or broof? or froof?][
-    set temperature 25
-    set pcolor scale-color red temperature 5 35
-  ]
-  ask patches with [froof?][set illumination 0.8 * max [illumination] of neighbors]
-  ask patches with [air?][
-    repeat 3[set illumination 0.8 * max [illumination] of neighbors]
-    set pcolor scale-color violet illumination 0 65000
-  ]
-end
+;to diffusion
+;  ask patches with [substrate?][set temperature 20]
+;  ask patches with [wall? or broof? or froof?][
+;    set temperature 25
+;    set pcolor scale-color red temperature 5 35
+;  ]
+;  ask patches with [froof?][set illumination 0.8 * max [illumination] of neighbors]
+;  ask patches with [air?][
+;    repeat 3[set illumination 0.8 * max [illumination] of neighbors]
+;    set pcolor scale-color violet illumination 0 65000
+;  ]
+;end
 
 to go
   ifelse(time:is-before (tick-datetime)(lasttime))[
-    ask patches with [air?][
+    ask air[
       carefully[
         set temperature time:ts-get-exact timeseries tick-datetime "airT"
         set humidity time:ts-get-exact timeseries tick-datetime "airRH"
@@ -190,7 +260,7 @@ to go
         set co2 time:ts-get-interp timeseries tick-datetime "CO2"
       ]
     ]
-    ask patches with[substrate?][
+    ask substrates[
       carefully[
         set temperature time:ts-get-exact timeseries tick-datetime "subT"
         set humidity time:ts-get-exact timeseries tick-datetime "subRH"
@@ -200,12 +270,11 @@ to go
       ]
     ]
     if(showtemp != show?)[
-      clear-drawing
+      ;clear-drawing
       ask turtle 0[ask other turtles [die]]
       build-greenhouse
       show-legend
     ]
-    show-legend
     show-color
     show-label
   ][
@@ -218,22 +287,22 @@ end
 
 to show-color
   ifelse(show? = "T")[
-    ask patches with[air?][set pcolor scale-color red temperature 5 35]
-    ask patches with[substrate?][set pcolor scale-color brown temperature 5 35]
+    ask air[set color scale-color red temperature 5 35]
+    ask substrates[set color scale-color brown temperature 5 35]
   ][
     ifelse(show? = "RH")[
-      ask patches with[air?][set pcolor scale-color gray humidity 20 80]
-      ask patches with[substrate?][set pcolor scale-color brown humidity 0.1 0.7]
+      ask air[set color scale-color gray humidity 20 80]
+      ask substrates[set color scale-color brown humidity 0.1 0.7]
     ][
       ifelse(show? = "I")[
-        ask patches with[air?][set pcolor scale-color violet illumination 0 60000]
-        ask patches with[substrate?][set pcolor scale-color brown humidity 0.1 0.7]
+        ask airs[set color scale-color violet illumination 0 60000]
+        ask substrates[set color scale-color brown humidity 0.1 0.7]
       ][
         ifelse(show? = "CO2")[
-          ask patches with[air?][set pcolor scale-color yellow co2 200 800]
-          ask patches with[substrate?][set pcolor scale-color brown humidity 0.1 0.7]
+          ask air[set color scale-color yellow co2 200 800]
+          ask substrates[set pcolor scale-color brown humidity 0.1 0.7]
         ][
-          ask patches with[air?][set pcolor black]
+          ask es with[air?][set pcolor black]
           ask patches with[substrate?][set pcolor brown]
         ]
       ]
@@ -353,7 +422,7 @@ GRAPHICS-WINDOW
 -1
 13.0
 1
-5
+10
 1
 1
 1
